@@ -66,7 +66,6 @@ if st.button("✅ Générer le planning cuisine"):
     num_slots = DAYS * HOURS_PER_DAY
     num_emps = len(df_emp)
 
-    # Créer les variables de shift : worker x role x time
     shifts = {(w,r): [model.NewBoolVar(f"w{w}_{r}_{t}") for t in range(num_slots)] for w in range(num_emps) for r in ROLES}
     is_off = {w: [] for w in range(num_emps)}
 
@@ -78,12 +77,10 @@ if st.button("✅ Générer le planning cuisine"):
             model.Add(total_shifts_day >= 1).OnlyEnforceIf(off.Not())
             is_off[w].append(off)
 
-    # 1 seul rôle par heure par employé
     for w in range(num_emps):
         for t in range(num_slots):
             model.Add(sum(shifts[(w,r)][t] for r in ROLES) <= 1)
 
-    # Max 10h par jour et respect coupures
     for w in range(num_emps):
         for d in range(DAYS):
             total_day = sum(shifts[(w,r)][idx(d,h)] for r in ROLES for h in range(HOURS_PER_DAY))
@@ -92,12 +89,21 @@ if st.button("✅ Générer le planning cuisine"):
             for h in range(HOURS_PER_DAY):
                 current = sum(shifts[(w,r)][idx(d,h)] for r in ROLES)
                 if h == 0:
-                    block_starts.append(current)
+                    start_var = model.NewBoolVar(f'start_{w}_{d}_{h}')
+                    model.Add(current == 1).OnlyEnforceIf(start_var)
+                    model.Add(current != 1).OnlyEnforceIf(start_var.Not())
+                    block_starts.append(start_var)
                 else:
                     prev = sum(shifts[(w,r)][idx(d,h-1)] for r in ROLES)
                     start_var = model.NewBoolVar(f'start_{w}_{d}_{h}')
-                    model.AddBoolAnd([current == 1, prev == 0]).OnlyEnforceIf(start_var)
-                    model.AddBoolOr([current != 1, prev != 0]).OnlyEnforceIf(start_var.Not())
+                    is_current = model.NewBoolVar(f"is_current_{w}_{d}_{h}")
+                    is_prev = model.NewBoolVar(f"is_prev_{w}_{d}_{h}")
+                    model.Add(current == 1).OnlyEnforceIf(is_current)
+                    model.Add(current != 1).OnlyEnforceIf(is_current.Not())
+                    model.Add(prev == 0).OnlyEnforceIf(is_prev)
+                    model.Add(prev != 0).OnlyEnforceIf(is_prev.Not())
+                    model.AddBoolAnd([is_current, is_prev]).OnlyEnforceIf(start_var)
+                    model.AddBoolOr([is_current.Not(), is_prev.Not()]).OnlyEnforceIf(start_var.Not())
                     block_starts.append(start_var)
             model.Add(sum(block_starts) <= int(df_emp.iloc[w]['Coupures Max']) + 1)
 
@@ -113,14 +119,12 @@ if st.button("✅ Générer le planning cuisine"):
     for w in range(num_emps):
         model.Add(sum(shifts[(w,r)][t] for r in ROLES for t in range(num_slots)) <= int(df_emp.iloc[w]['Heures Max']))
 
-    # Contraintes de compétence
     for w in range(num_emps):
         for r in ROLES:
             if not df_emp.iloc[w][r]:
                 for t in range(num_slots):
                     model.Add(shifts[(w,r)][t] == 0)
 
-    # Couvrir tous les besoins
     for d in range(DAYS):
         for h in range(HOURS_PER_DAY):
             t = idx(d,h)
