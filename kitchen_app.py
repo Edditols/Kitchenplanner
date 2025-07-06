@@ -142,15 +142,38 @@ if st.button("✅ Générer le planning cuisine"):
     else:
         st.success("✅ Planning cuisine généré !")
         planning = []
+        summary = []
         for w in range(num_emps):
+            total_hours = working_days = coupures = max_streak = streak = 0
             for d in range(DAYS):
+                worked_hours = [h for h in range(HOURS_PER_DAY) if any(solver.Value(shifts[(w,r)][idx(d,h)]) for r in ROLES)]
+                if worked_hours:
+                    working_days += 1
+                    total_hours += len(worked_hours)
+                    first_hour = worked_hours[0]
+                    last_hour = worked_hours[-1]
+                    span_duration = last_hour - first_hour + 1
+                    if len(worked_hours) < span_duration:
+                        coupures += 1
+                if solver.Value(is_off[w][d]):
+                    streak += 1
+                    max_streak = max(max_streak, streak)
+                else:
+                    streak = 0
                 row = {"Employé": df_emp.iloc[w]['Nom'], "Jour": day_names[d]}
                 for h in range(HOURS_PER_DAY):
-                    found = ""
+                    val = ""
                     for r in ROLES:
                         if solver.Value(shifts[(w,r)][idx(d,h)]):
-                            found = r
-                            break
-                    row[hour_labels[h]] = found
+                            val = r
+                    row[hour_labels[h]] = val
                 planning.append(row)
+            avg = round(total_hours/working_days, 2) if working_days else 0
+            summary.append({"Employé": df_emp.iloc[w]['Nom'], "Total heures": total_hours, "Jours travaillés": working_days,
+                            "Heures moy./jour": avg, "Nb coupures": coupures, "Max jours OFF consécutifs": max_streak})
+
+        st.subheader("📊 Résumé")
+        st.dataframe(pd.DataFrame(summary))
+
+        st.subheader("🕒 Planning horaire")
         st.dataframe(pd.DataFrame(planning))
