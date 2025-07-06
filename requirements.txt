@@ -1,0 +1,4 @@
+streamlit
+ortools==9.8.3296
+pandas
+openpyxl
