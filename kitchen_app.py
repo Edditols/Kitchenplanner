@@ -25,7 +25,7 @@ if "kitchen_df" not in st.session_state or st.session_state.kitchen_df.shape[0] 
         "Pizzaiolo": [False]*num_workers,
         "Plongeur": [False]*num_workers,
         "Heures Max": [42]*num_workers,
-        "Coupures Max": [2]*num_workers
+        "Coupures Max": [3]*num_workers
     })
 
 st.subheader("💼 Compétences des employés")
@@ -37,9 +37,16 @@ st.subheader("📋 Besoin horaire par poste (modifiable)")
 def default_needs():
     needs = {}
     for role in ROLES:
-        needs[role] = {
-            day: [1 if role != "Plongeur" else 0 for _ in range(HOURS_PER_DAY)] for day in day_names
-        }
+        daily = []
+        for h in range(HOURS_PER_DAY):
+            if 0 <= h <= 5 or 8 <= h <= 12:  # 10-15 or 18-22
+                need = 1 if role == "Plongeur" else 1
+            elif 6 <= h <= 7:  # 15-18
+                need = 1 if role == "Cuisinier" else 0
+            else:
+                need = 0
+            daily.append(need)
+        needs[role] = {day: daily.copy() for day in day_names}
     return needs
 
 if "role_needs" not in st.session_state:
@@ -92,7 +99,7 @@ if st.button("✅ Générer le planning cuisine"):
                     model.AddBoolAnd([current == 1, prev == 0]).OnlyEnforceIf(start_var)
                     model.AddBoolOr([current != 1, prev != 0]).OnlyEnforceIf(start_var.Not())
                     block_starts.append(start_var)
-            model.Add(sum(block_starts) <= 2)
+            model.Add(sum(block_starts) <= int(df_emp.iloc[w]['Coupures Max']) + 1)
 
     for w in range(num_emps):
         twos = []
