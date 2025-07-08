@@ -76,6 +76,8 @@ if st.button("✅ Générer le planning cuisine"):
             model.Add(total_shifts_day == 0).OnlyEnforceIf(off)
             model.Add(total_shifts_day >= 1).OnlyEnforceIf(off.Not())
             is_off[w].append(off)
+            # Si présent, travailler au moins 3h
+            model.Add(total_shifts_day >= 3).OnlyEnforceIf(off.Not())
 
     for w in range(num_emps):
         for t in range(num_slots):
