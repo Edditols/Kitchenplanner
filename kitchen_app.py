@@ -40,9 +40,9 @@ def default_needs():
     for role in ROLES:
         daily = []
         for h in range(HOURS_PER_DAY):
-            if 0 <= h <= 5 or 8 <= h <= 12:      # 10‑15 et 18‑22
+            if 0 <= h <= 5 or 8 <= h <= 12:      # 10-15 et 18-22
                 need = 1 if role == "Plongeur" else 1
-            elif 6 <= h <= 7:                    # 15‑18 : seulement cuisinier
+            elif 6 <= h <= 7:                    # 15-18 : seulement cuisinier
                 need = 1 if role == "Cuisinier" else 0
             else:
                 need = 0
@@ -196,4 +196,23 @@ if st.button("✅ Générer le planning cuisine"):
                     curr_off += 1
                     max_off_streak = max(max_off_streak, curr_off)
             avg_h = round(total_h/days_worked,2) if days_worked else 0
-            summary.append({"Employé":
+            
+            # --- THIS IS THE CORRECTED BLOCK ---
+            summary.append({
+                "Employé": df_emp.iloc[w]['Nom'],
+                "Heures/semaine": total_h,
+                "Jours travaillés": days_worked,
+                "Coupures/semaine": coup,
+                "Jours OFF cons. max": max_off_streak,
+                "H/jour en moyenne": avg_h
+            })
+            # --- END OF CORRECTION ---
+
+        df_planning = pd.DataFrame(planning)
+        df_summary = pd.DataFrame(summary)
+
+        st.subheader("🗓️ Planning hebdomadaire")
+        st.dataframe(df_planning.set_index(["Employé", "Jour"]))
+
+        st.subheader("📊 Résumé par employé")
+        st.dataframe(df_summary.set_index("Employé"))
