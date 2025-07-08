@@ -94,7 +94,9 @@ if st.button("✅ Générer le planning cuisine"):
                     start_var = model.NewBoolVar(f'start_{w}_{d}_{h}')
                     model.Add(current == 1).OnlyEnforceIf(start_var)
                     model.Add(current != 1).OnlyEnforceIf(start_var.Not())
-                    block_starts.append(start_var)
+                    # Minimum 3h de travail contiguë à partir de ce début de bloc
+model.Add(sum(shifts[(w,r)][idx(d, hh)] for r in ROLES for hh in range(h, h+3) if hh < HOURS_PER_DAY) >= 3).OnlyEnforceIf(start_var)
+block_starts.append(start_var)
                 else:
                     prev = sum(shifts[(w,r)][idx(d,h-1)] for r in ROLES)
                     start_var = model.NewBoolVar(f'start_{w}_{d}_{h}')
