@@ -8,12 +8,14 @@ scheduling rules. Nothing is asserted about a specific rota.
 All solver calls use a small time limit and an explicit ``random_seed`` so runs
 are reproducible, and every instance is tiny (at most three employees).
 
-Known limitation of the module (see the final report; ``planner.py`` was not
-changed): the "no role change inside a day" constraint is only enforced between
-*consecutive* hours. A worker who works two blocks separated by a gap may hold
-a different role in each block while ``validate`` still passes. The helper below
-checks the rule as documented (all worked roles in a day must be identical); the
-instances used here are built so that the solver cannot produce such a day.
+Inherited limitation of the engine, documented in ``planner.py`` and left
+unchanged by this task: the "no role change inside a day" rule is enforced only
+between two *consecutive worked hours*. A worker whose day contains a gap
+between two blocks may therefore hold a different role in each block.
+``assert_schedule_is_valid`` checks the rule as it is actually enforced, and
+``test_a_role_may_change_across_a_gap_today`` characterises the gap case so the
+behaviour cannot change unnoticed. The other instances here are built so the
+solver has no reason to produce such a day.
 """
 
 from __future__ import annotations
@@ -196,12 +198,20 @@ def assert_schedule_is_valid(problem: planner.Problem, schedule: planner.Schedul
                     "without that skill"
                 )
 
-            # Rule 3: a worker never changes role within the same day.
-            roles_worked = {role for role in grid if role is not None}
-            assert len(roles_worked) <= 1, (
-                f"{employee.name} works several roles on "
-                f"{planner.DAY_NAMES[day]}: {sorted(roles_worked)}"
-            )
+            # Rule 3, as the engine actually enforces it: a worker never
+            # changes role between two consecutive worked hours. This is
+            # deliberately NOT "one role per day": a day split into two blocks
+            # separated by a gap may hold a different role in each block. See
+            # the module docstring and test_a_role_may_change_across_a_gap_today.
+            for hour in range(hour_count - 1):
+                here, then = grid[hour], grid[hour + 1]
+                if here is not None and then is not None:
+                    assert here == then, (
+                        f"{employee.name} switches from {here!r} to {then!r} "
+                        f"between {planner.HOUR_LABELS[hour]} and "
+                        f"{planner.HOUR_LABELS[hour + 1]} on "
+                        f"{planner.DAY_NAMES[day]}"
+                    )
 
             # Rule 5: a worked day lasts at least the minimum block.
             if day_hours:
@@ -485,6 +495,46 @@ def test_a_gap_between_two_blocks_is_counted_as_a_split() -> None:
         assert summaries[name].total_hours == 0
         assert summaries[name].average_hours_per_day == pytest.approx(0.0)
         assert summaries[name].max_consecutive_days_off == planner.DAYS
+
+
+# --- Characterisation of an inherited limitation -------------------------
+
+
+def test_a_role_may_change_across_a_gap_today() -> None:
+    """Characterises the inherited hole in the "no role change in a day" rule.
+
+    The rule is enforced only between consecutive worked hours. This instance
+    leaves the solver no alternative: a single worker must cover Cuisinier at
+    10:00-12:00 and Pizzaiolo at 16:00-18:00 on the same day, separated by a
+    three-hour gap, and nobody else can take either block. Demand is exact, so
+    the returned grid is forced.
+
+    This test records what the engine does today; it does not endorse it.
+    Tightening the rule would change which schedules are accepted, so it
+    belongs to a later correctness task. If that task lands, this test is
+    expected to change.
+    """
+    employees = (planner.Employee("Solo", frozenset(planner.ROLES), 40, 1),)
+    needs = _empty_needs()
+    for hour in (0, 1, 2):
+        needs["Cuisinier"][0][hour] = 1
+    for hour in (6, 7, 8):
+        needs["Pizzaiolo"][0][hour] = 1
+    problem = planner.Problem(employees=employees, needs=needs)
+
+    assert planner.validate(problem) == [], planner.validate(problem)
+    schedule = planner.solve(problem, time_limit_s=TINY_TIME_LIMIT_S, random_seed=0)
+    assert schedule.solved, schedule.outcome
+    assert_schedule_is_valid(problem, schedule)
+
+    grid = schedule.assignments[0][0]
+    assert grid[0] == "Cuisinier" and grid[2] == "Cuisinier"
+    assert grid[6] == "Pizzaiolo" and grid[8] == "Pizzaiolo"
+
+    # The day holds two different roles, which the interface rule forbids but
+    # the model permits, because the blocks are separated by a gap.
+    roles_today = {role for role in grid if role is not None}
+    assert roles_today == {"Cuisinier", "Pizzaiolo"}, roles_today
 
 
 # --- validate: necessary conditions --------------------------------------

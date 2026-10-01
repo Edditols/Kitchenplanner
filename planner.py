@@ -12,7 +12,7 @@ The problem is a pure feasibility problem, and the solver therefore returns
 
 KNOWN LIMITATION, inherited unchanged from the original application and not
 fixed by this task: the "no role change inside a day" rule is only enforced
-between two *consecutive* hours. A worker whose day contains a gap between two
+between two *consecutive worked hours*. A worker whose day contains a gap between two
 work blocks may therefore hold a different role in each block, which the rule
 as written in the interface forbids. Fixing it changes which schedules the
 solver accepts, so it is a correctness fix belonging to a later task.

@@ -76,9 +76,11 @@ Status as of `task/harden-app`.
    `kitchen_app.py` behaviour, deliberately preserved by this task, and it belongs to
    the "correctness fixes and session-state preservation" task.
 4. **Role changes across a split — open, inherited.** The "no role change within a day"
-   rule is only enforced between two consecutive hours, so a worker whose day contains
-   a gap between two blocks may hold a different role in each block. Fixing it changes
-   which schedules are accepted and belongs to a later correctness task.
+   rule is only enforced between two consecutive *worked* hours, so a worker whose day
+   contains a gap between two blocks may hold a different role in each block.
+   `tests/test_planner.py` characterises this in
+   `test_a_role_may_change_across_a_gap_today`. Fixing it changes which schedules are
+   accepted and belongs to a later correctness task.
 5. **Unused dependency — open.** `openpyxl` is declared in `requirements.txt` but never
    imported anywhere in the code.
 6. **Unpinned environment — open.** Only `ortools` is pinned; `streamlit`, `pandas` and
