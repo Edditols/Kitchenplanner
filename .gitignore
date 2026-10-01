@@ -1,0 +1,23 @@
+# Environments
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# Tool state
+.architect-state/
+.pytest_cache/
+
+# Secrets — never committed
+.env
+.env.*
+.streamlit/secrets.toml
+
+# Local data stores and exports: they can hold employee personal data
+*.sqlite
+*.sqlite3
+*.db
+/exports/
+/out/
+*.xlsx
+*.xls
