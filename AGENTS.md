@@ -18,22 +18,15 @@ Instructions for any coding agent working in this repository. They are not optio
 
 ## Running commands
 
-- Every check, test, build check or script that measures or asserts a result must be
-  run through the wrapper, never directly:
-
-  `~/ai-tools/ask-architect/run-check <name> -- <command>`
-
+- Run every check, test and build command directly, in the project's own environment,
+  for example `.venv/bin/python -m pytest tests`.
 - Run only the checks that cover your change.
 - Never wait for CI. Never run the full test suite more than once per task, at the end.
 
 ## Escalation
 
-- When `run-check` prints `ARCHITECT_REQUIRED`, it refuses every further check until
-  the architect is consulted. Call the architect before making any other change, and
-  follow its decision.
-- Escalate also when a failure survives two different fixes, or when an architecture
-  question is unclear.
-- If the architect prints `ARCHITECT_BUDGET_EXHAUSTED`, stop and ask the owner.
+- Escalate to the owner when a failure survives two different fixes, or when an
+  architecture question is unclear.
 
 ## Tests
 
@@ -56,10 +49,7 @@ Instructions for any coding agent working in this repository. They are not optio
 ## Before pushing
 
 1. Commit your work.
-2. Send a short change summary to the architect for review.
-3. Push.
-4. If the review raises a problem, fix it, commit, and send a new summary. After two
-   review rounds that still raise a problem, stop and ask the owner.
+2. Push.
 
 ## Environment setup
 

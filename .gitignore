@@ -5,7 +5,6 @@ __pycache__/
 *.py[cod]
 
 # Tool state
-.architect-state/
 .pytest_cache/
 
 # Secrets — never committed

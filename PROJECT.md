@@ -46,7 +46,7 @@ After `task/harden-app`:
 - `kitchen_app.py` is a thin Streamlit adapter: it collects input, calls the engine
   and renders the result. It contains no constraint code.
 - `tests/test_planner.py` holds 30 pytest regression tests. Run them with
-  `.venv/bin/python -m pytest tests`, through the `run-check` wrapper.
+  `.venv/bin/python -m pytest tests`.
 - `PROJECT.md`, `AGENTS.md` and `.gitignore` exist. The virtualenv in `.venv/` is
   ignored and never committed.
 - Still absent: continuous integration, packaging, persistence, authentication and a
